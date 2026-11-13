@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      # إصدار Expo SDK المستخدم (54 مستقر ومجرّب). لا تغيّره إلا لسبب
+      EXPO_SDK: "54"
       # مفتاح Claude للتحقق من الصور (اختياري) - يُضاف من Settings > Secrets
       EXPO_PUBLIC_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
@@ -26,7 +28,7 @@ jobs:
 
       - name: إنشاء مشروع Expo وتثبيت الحزم المتوافقة
         run: |
-          npx --yes create-expo-app@latest build-app --template blank
+          npx --yes create-expo-app@latest build-app --template blank@sdk-${EXPO_SDK}
           cd build-app
           npx expo install expo-linear-gradient expo-blur expo-haptics expo-font expo-audio expo-camera expo-notifications \
             @expo-google-fonts/cairo @react-native-async-storage/async-storage @react-native-community/datetimepicker \
