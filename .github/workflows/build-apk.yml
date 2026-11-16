@@ -34,6 +34,10 @@ jobs:
             @expo-google-fonts/cairo @react-native-async-storage/async-storage @react-native-community/datetimepicker \
             react-native-screens react-native-safe-area-context @react-navigation/native @react-navigation/native-stack
           npx expo install --fix
+          AL=$(node -p "require('expo/package.json').dependencies['expo-modules-autolinking']")
+          echo "autolinking المطلوب: $AL"
+          npm ls expo-modules-autolinking || true
+          npm install --no-save "expo-modules-autolinking@$AL" || true
           npm ls --depth=0 | grep -E "expo|react-native" || true
 
       - name: نسخ كود WakeSnap وضبط الإعدادات
@@ -50,12 +54,21 @@ jobs:
           node ../scripts/configure.js native
           echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> android/gradle.properties
 
-      - name: فحص تشخيصي (يطبع الحزمة التي ينقصها رقم إصدار)
+      - name: إصلاح حقل version المفقود في وحدات Expo
+        working-directory: build-app
+        continue-on-error: true
+        run: node ../scripts/fix-publication.js
+
+      - name: فحص تشخيصي (ابعت لي ناتج هذه الخطوة لو فشل البناء)
         working-directory: build-app
         continue-on-error: true
         run: |
-          npx expo-modules-autolinking resolve --platform android --json > /tmp/al.json || true
-          node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/al.json','utf8'));for(const m of j.modules)for(const p of m.projects)if(!p.publication||!p.publication.version)console.log('MISSING VERSION:',m.packageName)" || true
+          echo "== الإصدارات =="
+          npm ls --depth=0 | grep -E "expo|react-native" || true
+          echo "== الوحدات (الرقم = ترتيبها) =="
+          npx expo-modules-autolinking resolve --platform android --json > /tmp/al.json 2>/tmp/al.err || true
+          head -c 400 /tmp/al.err || true
+          node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/al.json','utf8'));j.modules.forEach((m,i)=>console.log(i,m.packageName,m.packageVersion,JSON.stringify((m.projects&&m.projects[0]&&m.projects[0].publication)||null)))" || true
 
       - name: بناء APK
         working-directory: build-app/android
